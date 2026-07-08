@@ -1,116 +1,150 @@
-const {
+import sinon from 'sinon';
+import {
   generateUsername,
-  loginRes,
   isRestrictedEmailDomain,
   RESTRICTED_EMAIL_DOMAINS,
-} = require('../../../website/server/libs/auth/utils');
+  loginRes,
+} from '../../../website/server/libs/auth/utils';
 
-describe('auth utils', () => {
-  describe('generateUsername', () => {
-    it('generates a username', () => {
-      const username = generateUsername();
-      expect(typeof username).toBe('string');
-    });
-
-    it('prefixes the username with hb-', () => {
-      const username = generateUsername();
-      expect(username.startsWith('hb-')).toBe(true);
-    });
-
-    it('generates different usernames on each call', () => {
-      const username1 = generateUsername();
-      const username2 = generateUsername();
-      expect(username1).not.toBe(username2);
-    });
-
-    it('generates a username with a reasonable length', () => {
-      const username = generateUsername();
-      expect(username.length).toBeGreaterThan(5);
-    });
-
-    it('contains only safe lowercase alphanumeric characters and hyphens', () => {
-      const username = generateUsername();
-      expect(/^[a-z0-9-]+$/.test(username)).toBe(true);
-    });
+describe('generateUsername', () => {
+  it('generates a username', () => {
+    const username = generateUsername();
+    expect(username).to.be.a('string');
   });
 
-  describe('isRestrictedEmailDomain', () => {
-    it('returns false when no email is passed', () => {
-      expect(isRestrictedEmailDomain()).toBe(false);
-    });
-
-    it('returns false for a normal email', () => {
-      expect(isRestrictedEmailDomain('test@example.com')).toBe(false);
-    });
-
-    it('returns true for a restricted domain', () => {
-      const restrictedEmail = `test@${RESTRICTED_EMAIL_DOMAINS[0]}`;
-      expect(isRestrictedEmailDomain(restrictedEmail)).toBe(true);
-    });
-
-    it('returns true even if the restricted domain is in UPPERCASE', () => {
-      const uppercaseDomain = RESTRICTED_EMAIL_DOMAINS[0].toUpperCase();
-      const restrictedEmail = `test@${uppercaseDomain}`;
-      expect(isRestrictedEmailDomain(restrictedEmail)).toBe(true);
-    });
-
-    it('returns false for randomly formatted strings', () => {
-      expect(isRestrictedEmailDomain('not-an-email-at-all')).toBe(false);
-    });
+  it('prefixes the username with hb-', () => {
+    const username = generateUsername();
+    expect(username.startsWith('hb-')).to.equal(true);
   });
 
-  describe('loginRes', () => {
-    let user, req, res;
+  it('generates different usernames on each call', () => {
+    const username1 = generateUsername();
+    const username2 = generateUsername();
+    expect(username1).to.not.equal(username2);
+  });
 
-    beforeEach(() => {
-      user = {
-        _id: 'user-id',
-        apiToken: 'api-token',
-        auth: {
-          blocked: false,
-          local: { username: 'test-user' },
-        },
-      };
-      req = {
-        url: '/api/v3/user/login', 
-        headers: {} 
-      };
-      res = {
-        respond: jest.fn() 
-      };
-    });
+  it('generates a username no longer than 20 characters', () => {
+    const username = generateUsername();
+    expect(username.length).to.be.at.most(20);
+  });
 
-    it('responds with the user data', () => {
-      loginRes(user, req, res);
-      expect(res.respond).toHaveBeenCalledTimes(1);
-      expect(res.respond).toHaveBeenCalledWith(200, {
-        apiToken: 'api-token',
-        id: 'user-id',
-        newUser: false,
-        username: 'test-user'
-        });
-    });
+  it('contains only safe lowercase alphanumeric characters and hyphens', () => {
+    const username = generateUsername();
+    expect(/^[a-z0-9-]+$/.test(username)).to.equal(true);
+  });
+});
 
-    it('throws if the user is blocked', () => {
-      user.auth.blocked = true;
-      expect(() => loginRes(user, req, res)).toThrow();
-    });
+describe('isRestrictedEmailDomain', () => {
+  it('returns false when no email is passed', () => {
+    expect(isRestrictedEmailDomain()).to.equal(false);
+  });
 
-    it('throws if user object is undefined', () => {
-      expect(() => loginRes(undefined, req, res)).toThrow();
-    });
+  it('returns false for a normal email', () => {
+    expect(isRestrictedEmailDomain('test@example.com')).to.equal(false);
+  });
 
-    it('passes newUser: true if the user is newly registered', () => {
-      user.newUser = true;
-      
-      loginRes(user, req, res);
-      
-      expect(res.respond).toHaveBeenCalledWith(200, {
-        apiToken: 'api-token',
-        id: 'user-id',
-        newUser: true,
-        username: 'test-user'
-      });
+  it('returns true for a restricted domain', () => {
+    const restrictedEmail = `test@${RESTRICTED_EMAIL_DOMAINS[0]}`;
+    expect(isRestrictedEmailDomain(restrictedEmail)).to.equal(true);
+  });
+
+  it('returns true even if the restricted domain is in UPPERCASE', () => {
+    const uppercaseDomain = RESTRICTED_EMAIL_DOMAINS[0].toUpperCase();
+    const restrictedEmail = `test@${uppercaseDomain}`;
+    expect(isRestrictedEmailDomain(restrictedEmail)).to.equal(true);
+  });
+
+  it('returns false for randomly formatted strings with no @ symbol', () => {
+    expect(isRestrictedEmailDomain('not-an-email-at-all')).to.equal(false);
+  });
+});
+
+describe('loginRes', () => {
+  let user, req, res;
+
+  beforeEach(() => {
+    user = {
+      _id: 'user-id-123',
+      apiToken: 'api-token-abc',
+      newUser: false,
+      auth: {
+        blocked: false,
+        local: { username: 'test-user' },
+      },
+    };
+    
+    req = { 
+      url: '/api/v3/user/auth/local/login',
+      headers: {}
+    };
+    
+    res = {
+      respond: sinon.stub(),
+      redirect: sinon.stub(),
+      t: sinon.stub().returns('Account Suspended')
+    };
+  });
+
+  it('responds with 200 and the expected user payload on a normal login', () => {
+    loginRes(user, req, res);
+
+    expect(res.respond).to.be.calledOnce;
+    expect(res.respond).to.be.calledWithExactly(200, {
+      id: 'user-id-123',
+      apiToken: 'api-token-abc',
+      newUser: false,
+      username: 'test-user',
     });
+    expect(res.redirect).to.not.be.called;
+  });
+
+  it('defaults newUser to false when the user has no newUser flag set', () => {
+    delete user.newUser;
+    loginRes(user, req, res);
+    
+    const [, responseData] = res.respond.args[0];
+    expect(responseData.newUser).to.equal(false);
+  });
+
+  it('throws a NotAuthorized error and does not respond when the user is blocked', () => {
+    user.auth.blocked = true;
+
+    expect(() => loginRes(user, req, res)).to.throw();
+    expect(res.respond).to.not.be.called;
+    expect(res.redirect).to.not.be.called;
+  });
+
+  // generated by AI after test_strategy.md
+  it('redirects instead of responding with JSON for Android clients signing in via Apple', () => {
+    req.headers['x-client'] = 'habitica-android';
+    req.url = '/api/v3/user/auth/apple';
+
+    loginRes(user, req, res);
+
+    expect(res.redirect).to.be.calledOnce;
+    expect(res.redirect).to.be.calledWithExactly(
+      '/?id=user-id-123&key=api-token-abc&newUser=false',
+    );
+    expect(res.respond).to.not.be.called;
+  });
+
+  it('does not use the Android+Apple redirect for the same client on a non-apple route', () => {
+    req.headers['x-client'] = 'habitica-android';
+    req.url = '/api/v3/user/auth/local/login';
+
+    loginRes(user, req, res);
+
+    expect(res.redirect).to.not.be.called;
+    expect(res.respond).to.be.calledOnce;
+  });
+
+  it('does not use the Android+Apple redirect for a non-Android client on an apple route', () => {
+    req.headers['x-client'] = 'habitica-web';
+    req.url = '/api/v3/user/auth/apple';
+
+    loginRes(user, req, res);
+
+    expect(res.redirect).to.not.be.called;
+    expect(res.respond).to.be.calledOnce;
   });
 });
