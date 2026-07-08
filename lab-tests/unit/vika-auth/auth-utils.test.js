@@ -22,6 +22,16 @@ describe('auth utils', () => {
       const username2 = generateUsername();
       expect(username1).not.toBe(username2);
     });
+
+    it('generates a username with a reasonable length', () => {
+      const username = generateUsername();
+      expect(username.length).toBeGreaterThan(5);
+    });
+
+    it('contains only safe lowercase alphanumeric characters and hyphens', () => {
+      const username = generateUsername();
+      expect(/^[a-z0-9-]+$/.test(username)).toBe(true);
+    });
   });
 
   describe('isRestrictedEmailDomain', () => {
@@ -36,6 +46,16 @@ describe('auth utils', () => {
     it('returns true for a restricted domain', () => {
       const restrictedEmail = `test@${RESTRICTED_EMAIL_DOMAINS[0]}`;
       expect(isRestrictedEmailDomain(restrictedEmail)).toBe(true);
+    });
+
+    it('returns true even if the restricted domain is in UPPERCASE', () => {
+      const uppercaseDomain = RESTRICTED_EMAIL_DOMAINS[0].toUpperCase();
+      const restrictedEmail = `test@${uppercaseDomain}`;
+      expect(isRestrictedEmailDomain(restrictedEmail)).toBe(true);
+    });
+
+    it('returns false for randomly formatted strings', () => {
+      expect(isRestrictedEmailDomain('not-an-email-at-all')).toBe(false);
     });
   });
 
@@ -78,6 +98,19 @@ describe('auth utils', () => {
 
     it('throws if user object is undefined', () => {
       expect(() => loginRes(undefined, req, res)).toThrow();
+    });
+
+    it('passes newUser: true if the user is newly registered', () => {
+      user.newUser = true;
+      
+      loginRes(user, req, res);
+      
+      expect(res.respond).toHaveBeenCalledWith(200, {
+        apiToken: 'api-token',
+        id: 'user-id',
+        newUser: true,
+        username: 'test-user'
+      });
     });
   });
 });
