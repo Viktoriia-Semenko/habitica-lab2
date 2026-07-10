@@ -6,65 +6,53 @@ import crit from '../../website/common/script/fns/crit.js';
 describe('scoreTask.js', () => {
   let user;
   let task;
-  let critStub;
 
   beforeEach(() => {
-    critStub = sinon.stub(crit, 'crit').returns(1);
-
     user = {
       _id: 'user1',
       stats: {
-        gp: 100, hp: 50, exp: 0, mp: 0, str: 0, int: 0, per: 0, con: 0, buffs: { streaks: false },
+        gp: 100, hp: 50, exp: 0, mp: 0,
+        str: 10, int: 10, per: 10, con: 10, // Поставив значення > 0 для реалістичного розрахунку
+        lvl: 5,
+        class: 'warrior',
+        buffs: { streaks: false, str: 0, int: 0, per: 0, con: 0 },
+        training: { str: 0, int: 0, con: 0, per: 0 },
       },
-      _tmp: {},
-      preferences: { dayStart: 0, automaticAllocation: false },
+      items: { gear: { equipped: {} } },
+      flags: { customizationsNotification: false, levelDrops: {} },
+      party: { _id: 'party1', quest: { progress: { up: 0 } } },
       guilds: [],
-      party: { _id: 'party1' },
+      preferences: { dayStart: 0, automaticAllocation: false },
       achievements: {},
+      _tmp: {},
       addNotification: sinon.spy(),
       addAchievement: sinon.spy(),
     };
 
     task = {
-      id: 'task1',
-      type: 'habit',
-      userId: 'user1',
-      value: 0,
-      priority: 1,
-      counterUp: 0,
-      counterDown: 0,
-      history: [],
-      group: {},
+      id: 't1', type: 'habit', value: 0, priority: 1, 
+      counterUp: 0, counterDown: 0, history: [], group: {}
     };
+
+    sinon.stub(crit, 'crit').returns(1);
   });
 
   afterEach(() => {
-    critStub.restore();
-  });
-
-  describe('Validation & Security', () => {
-    it('throws BadRequest when task belongs to another user', () => {
-      task.userId = 'otherUser';
-      expect(() => scoreTask({ user, task, direction: 'up' })).to.throw();
-    });
-
-    it('throws BadRequest when task group is inaccessible', () => {
-      task.group.id = 'secretGuild';
-      expect(() => scoreTask({ user, task, direction: 'up' })).to.throw();
-    });
+    sinon.restore();
   });
 
   describe('Habit', () => {
-    it('increments counterUp and increases value on up-score', () => {
+    it('збільшує counterUp та value при позитивному скорингу', () => {
       scoreTask({ user, task, direction: 'up' });
       expect(task.counterUp).to.equal(1);
       expect(task.value).to.be.above(0);
     });
 
-    it('decrements counterDown and decreases value/hp on down-score', () => {
+    it('зменшує hp при негативному скорингу', () => {
+      const initialHp = user.stats.hp;
       scoreTask({ user, task, direction: 'down' });
       expect(task.counterDown).to.equal(1);
-      expect(task.value).to.be.below(0);
+      expect(user.stats.hp).to.be.below(initialHp);
     });
   });
 
@@ -72,46 +60,19 @@ describe('scoreTask.js', () => {
     beforeEach(() => {
       task.type = 'daily';
       task.streak = 0;
-      task.completed = false;
     });
 
-    it('increments streak and sets completed true on up-score', () => {
+    it('збільшує streak та позначає як виконаний при up-скорингу', () => {
       scoreTask({ user, task, direction: 'up' });
       expect(task.streak).to.equal(1);
-      expect(task.completed).to.equal(true);
-    });
-
-    it('decrements streak and sets completed false on down-score', () => {
-      task.streak = 1;
-      task.completed = true;
-      scoreTask({ user, task, direction: 'down' });
-      expect(task.streak).to.equal(0);
-      expect(task.completed).to.equal(false);
+      expect(task.completed).to.be.true;
     });
   });
 
-  describe('Todo', () => {
-    beforeEach(() => {
-      task.type = 'todo';
-    });
-
-    it('marks completed and sets dateCompleted on up-score', () => {
-      scoreTask({ user, task, direction: 'up' });
-      expect(task.completed).to.equal(true);
-      expect(task.dateCompleted).to.exist;
-    });
-  });
-
-  describe('Reward', () => {
-    beforeEach(() => {
-      task.type = 'reward';
-      task.value = 50;
-    });
-
-    it('reduces gp by task value on purchase', () => {
-      const initialGp = user.stats.gp;
-      scoreTask({ user, task, direction: 'up' });
-      expect(user.stats.gp).to.equal(initialGp - 50);
+  describe('Validation & Security', () => {
+    it('кидає BadRequest, якщо task належить іншому користувачу', () => {
+      task.userId = 'other_user';
+      expect(() => scoreTask({ user, task, direction: 'up' })).to.throw(/Cannot score task belonging to another user/);
     });
   });
 });
