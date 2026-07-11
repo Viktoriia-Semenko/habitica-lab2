@@ -100,6 +100,7 @@
     "test:sanity": "nyc --silent --no-clean mocha test/sanity --recursive",
     "test:common": "nyc --silent --no-clean mocha test/common --recursive",
     "test:content": "nyc --silent --no-clean mocha test/content --recursive",
+    "test:lab": "nyc --no-clean --reporter=text --reporter=html mocha --require @babel/register lab-tests --recursive",
     "coverage": "nyc report --reporter=html --report-dir coverage/results; open coverage/results/index.html",
     "sprites": "gulp sprites:compile",
     "client:dev": "cd website/client && npm run serve",
