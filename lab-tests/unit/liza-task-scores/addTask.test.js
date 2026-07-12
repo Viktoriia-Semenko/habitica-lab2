@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import addTask from '../../website/common/script/ops/addTask.js';
+import addTask from '../../../website/common/script/ops/addTask.js';
 
 describe('addTask.js', () => {
   let user;

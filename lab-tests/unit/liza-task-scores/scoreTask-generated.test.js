@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
-import scoreTask from '../../website/common/script/ops/scoreTask.js';
-import crit from '../../website/common/script/fns/crit.js';
+import scoreTask from '../../../website/common/script/ops/scoreTask.js';
+import crit from '../../../website/common/script/fns/crit.js';
 
 describe('scoreTask.js', () => {
   let user;

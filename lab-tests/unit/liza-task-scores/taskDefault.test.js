@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import taskDefaults from '../../website/common/script/libs/taskDefaults.js';
+import taskDefaults from '../../../website/common/script/libs/taskDefaults.js';
 
 describe('taskDefaults.js', () => {
   let user;
