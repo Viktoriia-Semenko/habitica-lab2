@@ -1,0 +1,17 @@
+{
+  "include": [
+    "website/common/script/ops/scoreTask.js",
+    "website/common/script/libs/statsComputed.js",
+    "website/common/script/fns/updateStats.js",
+    "website/common/script/fns/crit.js",
+    "website/common/script/fns/getUtcOffset.js"
+  ],
+  "exclude": [
+    "**/*.test.js",
+    "lab-tests/**"
+  ],
+  "reporter": ["text", "html", "lcov"],
+  "report-dir": "coverage/lab",
+  "all": true,
+  "check-coverage": false
+}
